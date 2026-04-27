@@ -1,11 +1,13 @@
-import { AuthProvider } from "./context/AuthContext";
+import React from "react";
 import AppRoutes from "./routes/AppRoutes";
+import { Toaster } from "sonner";
 
 function App() {
   return (
-    <AuthProvider>
+    <>
+      <Toaster position="top-right" richColors closeButton />
       <AppRoutes />
-    </AuthProvider>
+    </>
   );
 }
 

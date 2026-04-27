@@ -1,23 +1,29 @@
-import { useState } from "react";
-import { BadgeCheck, Menu } from "lucide-react";
-import { Outlet, useNavigate, NavLink } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import {
-  Award,
-  Calendar,
-  FileText,
-  Bell,
-  LogOut,
-  LayoutDashboard
+import React from "react";
+import { useState, useEffect, useRef } from "react";
+import { 
+  BadgeCheck, Menu, Bell, Award, Calendar, FileText, LogOut, LayoutDashboard, TriangleAlert 
 } from "lucide-react";
+import { Outlet, useNavigate, NavLink } from "react-router-dom";
+import { useAuth } from "../context";
+import { toast } from "sonner";
+import { notificationApi } from "../api/notificationApi";
 import "./DashboardLayout.css";
 
 function DashboardLayout() {
+
+  
+
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(window.innerWidth <= 768);
   const [mobileOpen, setMobileOpen] = useState(false);
   console.log("Current User:", user);
+
+  const roleString = user?.role?.toString().toLowerCase() || "";
+  const isAdmin = roleString === "admin";
+  const userRoleDisplay = roleString
+    ? roleString.charAt(0).toUpperCase() + roleString.slice(1)
+    : "";
 
   const hour = new Date().getHours();
   const greeting =
@@ -25,10 +31,52 @@ function DashboardLayout() {
     hour < 18 ? "Good Afternoon" :
     "Good Evening";
 
-  const handleLogout = () => {
-  logout();
-  navigate("/");
-};
+  const prevCountRef = useRef(0);
+
+  // ✅ REAL-TIME POLLING FOR STUDENT REMINDERS
+  useEffect(() => {
+    // Only poll for students
+    if (isAdmin || !user?.id) return;
+
+    const [checkNotifications] = [async () => {
+      try {
+        const count = await notificationApi.getUnreadCount();
+        
+        // COMPARISON LOGIC: Only toast if unread count increases
+        if (count > prevCountRef.current) {
+          toast("You have a new reminder from the Admin!", {
+            description: "Check your reminders for more details.",
+            duration: 5000,
+            style: {
+              background: "#6366f1", // INDIGO THEME
+              color: "#ffffff",
+              border: "1px solid #4f46e5",
+              borderRadius: "12px",
+              padding: "16px"
+            },
+            icon: <Bell size={20} color="#ffffff" />,
+          });
+        }
+        
+        // SYNC STATE: Only update ref if count changed
+        prevCountRef.current = count;
+      } catch (err) {
+        console.warn("Notification polling error:", err);
+      }
+    }];
+
+    // Initial check
+    checkNotifications();
+
+    // POLLLING INTERVAL: 10 Seconds
+    const intervalId = setInterval(checkNotifications, 10000);
+
+    // OPTIMIZATION: Clear interval on unmount
+    return () => {
+      clearInterval(intervalId);
+      console.log("Polling interval cleared");
+    };
+  }, [isAdmin, user?.id]);
 
   return (
     <div className="dashboard-container">
@@ -54,7 +102,7 @@ function DashboardLayout() {
         </div>
     
         <nav>
-  {user?.role === "admin" ? (
+  {isAdmin ? (
     <>
       <NavLink
         to="/admin/dashboard"
@@ -64,6 +112,16 @@ function DashboardLayout() {
       >
         <LayoutDashboard size={18} />
         <span>Dashboard</span>
+      </NavLink>
+      
+      <NavLink
+        to="/admin/mystudents"
+        className={({ isActive }) =>
+          isActive ? "nav-item active" : "nav-item"
+        }
+      >
+        <FileText size={18} />
+        <span>My Students</span>
       </NavLink>
 
       <NavLink
@@ -84,7 +142,7 @@ function DashboardLayout() {
       >
         <Calendar size={18} />
         <span>Expiring Certs</span>
-      </NavLink>
+      </NavLink>   
 
       <NavLink
         to="/admin/renewals"
@@ -135,7 +193,12 @@ function DashboardLayout() {
         <Bell size={18} />
         <span>Reminders</span>
       </NavLink>
-
+      <NavLink to="/student/alerts" className={({ isActive }) =>
+        isActive ? "nav-item active" : "nav-item"
+      }>
+        <TriangleAlert size={18} />
+        <span>Alerts</span>
+      </NavLink>
       <NavLink to="/student/certifications" className={({ isActive }) =>
         isActive ? "nav-item active" : "nav-item"
       }>
@@ -183,23 +246,31 @@ function DashboardLayout() {
   </button>
 
     <div className="header-text">
-      <h2>Welcome back, {user?.name}</h2>
+      <h2>
+        Welcome back, {user?.firstName}{user?.middleName ? ' ' + user.middleName : ''} {user?.lastName}
+      </h2>
       <span className="subtle-text">
-        Here’s your certification performance overview.
+        {greeting}, here’s your certification performance overview.
       </span>
     </div>
   </div>
 
   <div className="header-right">
-  <button className="icon-btn">
+    <button
+    className="icon-btn"
+    onClick={() => {
+      if (!isAdmin) navigate("/student/reminders");
+    }}
+  >
     <Bell size={18} />
     <span className="notification-dot"></span>
   </button>
 
   <div className="user-block">
     <div className="avatar">
-      {user?.name
-        ?.split(" ")
+      {`${user?.firstName || ""}${user?.middleName ? " " + user.middleName : ""} ${user?.lastName || ""}`
+        .trim()
+        .split(" ")
         .map(n => n[0])
         .join("")
         .toUpperCase()
@@ -207,16 +278,24 @@ function DashboardLayout() {
     </div>
     <div className="user-info">
   <span className="user-name">
-    {user?.name}
+    {user?.firstName}{user?.middleName ? ' ' + user.middleName : ''} {user?.lastName}
   </span>
 
   <small className="user-role">
-    {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+    {userRoleDisplay}
   </small>
 </div>
   </div>
 
-  <button className="logout-btn" onClick={logout}>Logout</button>
+  <button
+  className="logout-btn"
+  onClick={() => {
+    logout();
+    navigate("/login");
+  }}
+>
+  Logout
+</button>
 </div>
 
 </div>

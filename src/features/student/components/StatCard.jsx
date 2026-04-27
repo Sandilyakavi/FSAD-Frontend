@@ -1,3 +1,4 @@
+import React from "react";
 import { Users, BadgeCheck, Clock, AlertCircle } from "lucide-react";
 
 const StatCard = ({ label, value, color }) => {

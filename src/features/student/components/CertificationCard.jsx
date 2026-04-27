@@ -1,6 +1,7 @@
+import React from "react";
 import { Award, Eye, RefreshCw } from "lucide-react";
 
-const CertificationCard = ({ cert, onView, onRenew }) => {
+const CertificationCard = ({ cert, onView, onRenew, onEdit, onDelete }) => {
   return (
     <div
       style={{
@@ -47,6 +48,12 @@ const CertificationCard = ({ cert, onView, onRenew }) => {
           <strong>Expires:</strong> {cert.expires}
         </div>
       </div>
+      
+
+      
+
+      
+
 
       {/* Buttons */}
       <div style={{ display: "flex", gap: "12px" }}>
@@ -65,7 +72,7 @@ const CertificationCard = ({ cert, onView, onRenew }) => {
         </button>
 
         <button
-          onClick={onRenew}
+          onClick={() => onRenew(cert)}
           style={{
             flex: 1,
             background: "#374151",
@@ -76,6 +83,36 @@ const CertificationCard = ({ cert, onView, onRenew }) => {
           }}
         >
           <RefreshCw size={16} /> Request Renewal
+        </button>
+      </div>
+
+      <div style={{ display: "flex", gap: "12px", marginTop: "10px" }}>
+        <button
+          onClick={() => onEdit(cert)}
+          style={{
+            flex: 1,
+            background: "#2563eb",
+            color: "white",
+            padding: "10px",
+            borderRadius: "10px",
+            cursor: "pointer",
+          }}
+        >
+          Edit
+        </button>
+
+        <button
+          onClick={() => onDelete(cert.id)}
+          style={{
+            flex: 1,
+            background: "#dc2626",
+            color: "white",
+            padding: "10px",
+            borderRadius: "10px",
+            cursor: "pointer",
+          }}
+        >
+          Delete
         </button>
       </div>
     </div>
